@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 # Function to get the relative path of an asset
 def relative_to_assets(path: str) -> Path:
-    ASSETS_PATH = Path(__file__).parent / Path(r"C:\Users\amiel\Downloads\COMPROG SHIT\build\assets\frame0")
+    ASSETS_PATH = Path(__file__).parent / "assets" / "frame0"
     return ASSETS_PATH / Path(path)
 
 # Function to restore the main window
@@ -28,7 +28,7 @@ def restore_main_window():
     # Add some text elements to the canvas
     canvas.create_text(105.0, 0.0, anchor="nw", text="GEOROCK ANALYZER", fill="#000000", font=("Viga Regular", 26 * -1))
     canvas.create_text(170.0, 47.0, anchor="nw", text="What would you like to do?", fill="#000000", font=("Lexend Regular", 12 * -1))
-    canvas.create_text(190.0, 100.0, anchor="nw", text="PLEASE SELECT", fill="#000000", font=("Lexend Regular", 15 * -1))
+    canvas.create_text(190.0, 100.0, anchor="nw", text="PLEASE SELECT", fill="#000000", font=("Lexend Regular", 15 * -1, "bold"))
 
     # Create and place button 1
     button_image_1 = PhotoImage(file=relative_to_assets("button_1.png"))
@@ -47,39 +47,66 @@ def restore_main_window():
     window.columnconfigure([0, 1], weight=1)  # Allow both columns to expand equally
 
 def open_rock_list_window():
+    # Nested functions for event handling
+    def on_frame_configure(event):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    def on_canvas_configure(event):
+        canvas_width = event.width
+        frame_width = content_frame.winfo_reqwidth()
+        new_x = max(0, (canvas_width - frame_width) // 2)
+        canvas.coords(content_window, new_x, 0)
+        canvas.itemconfig(content_window, width=canvas_width)
+
+    def show_tooltip(event, text):
+        tooltip = tk.Toplevel(window)
+        tooltip.wm_overrideredirect(True)
+        tooltip.geometry(f"+{event.x_root + 10}+{event.y_root + 10}")
+        label = tk.Label(tooltip, text=text, background="white", relief="solid", borderwidth=1, font=("Calibri", 10))
+        label.pack()
+        event.widget.tooltip = tooltip
+
+    def hide_tooltip(event):
+        if hasattr(event.widget, 'tooltip'):
+            event.widget.tooltip.destroy()
+
     # Clear the main window by removing all existing widgets
     for widget in window.winfo_children():
         widget.destroy()
-    
+
     # Update the main window title and set a fixed size
     window.title("Available Georocks")
     window.geometry("400x400")
-    
+
     # Add a label to the main window
     label = tk.Label(window, text="Available Georocks", font=("Arial", 14))
     label.pack(anchor="n", pady=10)
-    
+
     # Create a frame to hold the scrollable content and center it in the window
     scroll_frame = tk.Frame(window)
     scroll_frame.pack(fill=tk.BOTH, expand=True)
-    
+
     # Create a canvas inside the frame
     canvas = tk.Canvas(scroll_frame)
     canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    
+
     # Create a vertical scrollbar and link it to the canvas
     scrollbar = ttk.Scrollbar(scroll_frame, orient="vertical", command=canvas.yview)
     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-    
+
     # Configure the canvas to use the scrollbar
     canvas.configure(yscrollcommand=scrollbar.set)
-    
+
     # Create a frame inside the canvas to hold the content
     content_frame = tk.Frame(canvas)
-    
+
     # Create a window in the canvas to host the content frame
-    content_window = canvas.create_window((0, 0), window=content_frame, anchor="nw")
-    
+    content_window = canvas.create_window((0, 0), window=content_frame, anchor="n")
+
+    # Create a centered frame inside the content frame
+    centered_frame = tk.Frame(content_frame)
+    centered_frame.pack(anchor="center")
+
     # Define the list of georocks
     rock_list = [
         "Granite", "Limestone", "Obsidian", "Sandstone", "Shale",
@@ -87,47 +114,53 @@ def open_rock_list_window():
         "Conglomerate", "Gabbro", "Dolomite", "Rhyolite", "Anorthosite",
         "Siltstone", "Gypsum", "Pumice", "Serpentine"
     ]
-    
-    # Create two frames inside the content frame for two columns
-    left_column = tk.Frame(content_frame)
-    right_column = tk.Frame(content_frame)
-    left_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    right_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    
-    # Distribute georocks into two columns
-    mid_index = len(rock_list) // 2
+
+    # Create columns dynamically based on the number of rocks
+    num_columns = 2
+    columns = [tk.Frame(centered_frame) for _ in range(num_columns)]
+    for column in columns:
+        column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+    # Distribute georocks into columns
+    rock_properties = {
+        "Granite": {"hardness": 6, "color": "Beige"},
+        "Limestone": {"hardness": 3, "color": "Dirty White"},
+        "Obsidian": {"hardness": 5, "color": "Black"},
+        "Sandstone": {"hardness": 6, "color": "Tan"},
+        "Shale": {"hardness": 3, "color": "Gray"},
+        "Basalt": {"hardness": 7, "color": "Black"},
+        "Marble": {"hardness": 4, "color": "White"},
+        "Slate": {"hardness": 4, "color": "Gray"},
+        "Gneiss": {"hardness": 7, "color": "Light Gray"},
+        "Schist": {"hardness": 7, "color": "Green"},
+        "Quartzite": {"hardness": 7, "color": "Light Brown"},
+        "Conglomerate": {"hardness": 7, "color": "Brown"},
+        "Gabbro": {"hardness": (6,7), "color": "Dark Green"},
+        "Dolomite": {"hardness": (3,4), "color": "White"},
+        "Rhyolite": {"hardness": 6, "color": "Light Gray"},
+        "Anorthosite": {"hardness": 6, "color": "Gray"},
+        "Siltstone": {"hardness": 3, "color": "Brown"},
+        "Gypsum": {"hardness": 2, "color": "Dirty White"},
+        "Pumice": {"hardness": 2, "color": "White"},
+        "Serpentine": {"hardness": 4, "color": "Yellow-Green"}
+    }
+
     for index, rock in enumerate(rock_list):
-        parent = left_column if index < mid_index else right_column
+        parent = columns[index % num_columns]
         bullet_label = tk.Label(parent, text=f"• {rock}", font=("Arial", 12), anchor="w")
-        bullet_label.pack(anchor="w", padx=5)
-    
-    # Update the canvas scroll region when the size of the content frame changes
-    def on_frame_configure(event):
-        canvas.configure(scrollregion=canvas.bbox("all"))
-    
+        bullet_label.pack(anchor="w", padx=5, pady=2)  # Left-align the labels with padding
+        tooltip_text = f"Hardness: {rock_properties[rock]['hardness']}, Color: {rock_properties[rock]['color']}"
+        bullet_label.bind("<Enter>", lambda event, text=tooltip_text: show_tooltip(event, text))
+        bullet_label.bind("<Leave>", hide_tooltip)
+
+    # Bind events to update the canvas scroll region
     content_frame.bind("<Configure>", on_frame_configure)
-    
-    # Bind the canvas to handle resizing
-    def on_canvas_configure(event):
-        # Center the content frame horizontally within the canvas
-        canvas_width = event.width
-        frame_width = content_frame.winfo_reqwidth()
-        new_x = max(0, (canvas_width - frame_width) // 2)
-        canvas.coords(content_window, new_x, 0)
-
-        # Update the scroll region to encompass the entire content frame
-        canvas.configure(scrollregion=canvas.bbox("all"))
-
-        # Ensure the canvas window is updated to reflect the new width
-        canvas.itemconfig(content_window, width=frame_width)
-
-
     canvas.bind("<Configure>", on_canvas_configure)
-    
+
     # Add a back button
     back_button = tk.Button(window, text="Back", command=restore_main_window)
     back_button.pack(anchor="w", padx=10, pady=10)
-
+    
 def rock_database():
     
     # Clear the main window by removing all existing widgets
@@ -347,8 +380,13 @@ def rock_database():
                     match = False
 
                 # Compare hardness
-                if characteristics.get("hardness") != user_hardness:
-                    match = False
+                rock_hardness = characteristics.get("hardness")
+                if isinstance(rock_hardness, tuple):
+                    if user_hardness not in rock_hardness:
+                        match = False
+                else:
+                    if rock_hardness != user_hardness:
+                        match = False
 
                 # Add matching rock to the list
                 if match:
@@ -462,14 +500,14 @@ def rock_database():
                 self.message_text.set("Error: Please enter a hardness value.")
                 return
 
-            # Convert hardness input to integer and validate range
+            # Convert hardness input to float and validate range
             try:
-                hardness_value = int(hardness_input)
+                hardness_value = float(hardness_input)
                 if hardness_value < 1 or hardness_value > 10:
-                    self.message_text.set("Error: Hardness must be an integer between 1 and 10.")
+                    self.message_text.set("Error: Hardness must be a number between 1 and 10.")
                     return
             except ValueError:
-                self.message_text.set("Error: Hardness must be an integer between 1 and 10.")
+                self.message_text.set("Error: Hardness must be a number between 1 and 10.")
                 return
 
             # Search for matching rocks
@@ -492,7 +530,6 @@ def rock_database():
             else:
                 # No matching rock found
                 self.message_text.set("No matching rock found.")
-
 
         def display_results(self, rock, characteristics):
             # Preprocess the characteristics text to add indentation in multi-line descriptions
@@ -558,7 +595,7 @@ def rock_database():
             self.style_combobox.pack(anchor='center', pady=0)
             self.hardness_label.pack(anchor='center', pady=0)
             self.hardness_entry.pack(anchor='center', pady=0)
-            self.search_button.pack(anchor='center', pady=0)
+            self.search_button.pack(anchor='center', pady=5)
 
             # Hide the "Search Again" button
             self.search_again_button.pack_forget()
@@ -608,7 +645,7 @@ canvas.image = image_image_1  # Retain reference to the image
 # Add some text elements to the canvas
 canvas.create_text(105.0, 0.0, anchor="nw", text="GEOROCK ANALYZER", fill="#000000", font=("Viga Regular", 26 * -1))
 canvas.create_text(170.0, 47.0, anchor="nw", text="What would you like to do?", fill="#000000", font=("Lexend Regular", 12 * -1))
-canvas.create_text(190.0, 100.0, anchor="nw", text="PLEASE SELECT", fill="#000000", font=("Lexend Regular", 15 * -1))
+canvas.create_text(190.0, 100.0, anchor="nw", text="PLEASE SELECT", fill="#000000", font=("Lexend Regular", 15 * -1, "bold"))
 
 # Create and place button 1
 button_image_1 = PhotoImage(file=relative_to_assets("button_1.png"))
